@@ -1,49 +1,76 @@
 // Firebase imports
-const admin = require('firebase-admin');
-const { onRequest } = require("firebase-functions/v1/https");
-const { initializeApp, applicationDefault, cert } = require('firebase-admin/app');
-const { getFirestore, Timestamp, FieldValue, Filter } = require('firebase-admin/firestore');
+const admin = require("firebase-admin");
+const {onRequest} = require("firebase-functions/v1/https");
+const {initializeApp} = require("firebase-admin/app");
+const {getFirestore} = require("firebase-admin/firestore");
 
 // Initalize the admin app
 initializeApp();
 
+// Initalize the firestore db
 const db = getFirestore();
 
+// Response constants
+const UNSUCESSFUL_RES = 500;
+const SUCESSFUL_RES = 200;
 
-// Create a new user
-exports.RegisterUser = onRequest(async (req,res) => {
-    try {
-        // Create the new user
-        const userRecord = await admin.auth().createUser({
-            email: req.body.email,
-            password: req.body.password,
-            displayName: req.body.displayName
-        });
-        // Return sucessful operation
-        return res.status(200).send({"User Created": userRecord});
-    } catch(error) {
-        // Return the error operation 
-        return res.status(500).send({"Error Creating User": error});
-    }
+
+// Creates a new user
+// JSON body should send through email, password, and the display name
+exports.RegisterUser = onRequest(async (req, res) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "GET, POST");
+  res.set("Access-Control-Allow-Headers", "Content-Type");
+  try {
+    // Create the new user
+    const userRecord = await admin.auth().createUser({
+      email: req.body.email,
+      password: req.body.password,
+      displayName: req.body.displayName,
+    });
+    // Return sucessful operation
+    return res.status(SUCESSFUL_RES).send({"User Created": userRecord});
+  } catch (error) {
+    // Return the error operation
+    return res.status(UNSUCESSFUL_RES).send({"Error Creating User": error});
+  }
 });
 
-exports.GetAllLeaderboardRecords = onRequest(async (req,res) => {
-    try {
-        const collectionRef = await db.collection('leaderboard').get();
-        const records = collectionRef.docs.map(doc => doc.data());
-        return res.status(200).send({"Records": records});
-    } catch(error) {
-        return res.status(500).send({"Error": "Could not fetch leaderboard records"});
-    }
+// Gets all records in the leaderboard collection
+exports.GetAllLeaderboardRecords = onRequest(async (req, res) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "GET, POST");
+  res.set("Access-Control-Allow-Headers", "Content-Type");
+  try {
+    const collectionRef = await db.collection("leaderboard").get();
+    const records = collectionRef.docs.map((doc) => doc.data());
+    return res.status(SUCESSFUL_RES).send({"Records": records});
+  } catch (error) {
+    return res.status(UNSUCESSFUL_RES).send(
+        {"Error": "Could not fetch leaderboard records"});
+  }
 });
 
-exports.GetUserLeaderboardRecord = onRequest(async (req,res) => {
-    try {
-        const collectionRef = await db.collection('leaderboard').where(
-                                      'displayname', '==', req.body.name).get();
-        const record = collectionRef.docs.map(doc => doc.data());
-        return res.status(200).send({"Record": record});
-    } catch(error) {
-        return res.status(500).send({"Error": "Cannot get user record"});
-    }
+// Gets a specific record based on the username
+// JSON body should send through the display name
+exports.GetUserLeaderboardRecord = onRequest(async (req, res) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "GET, POST");
+  res.set("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") {
+    // Respond to OPTIONS request with a successful status
+    res.status(SUCESSFUL_RES).send("");
+    return;
+  }
+
+  try {
+    const collectionRef = await db.collection("leaderboard").where(
+        "name", "==", req.body.name).get();
+    const record = collectionRef.docs.map((doc) => doc.data());
+    return res.status(SUCESSFUL_RES).send({"Record": record});
+  } catch (error) {
+    console.error("Error fetching user record:", error);
+    return res.status(UNSUCESSFUL_RES).send(
+        {"Error": "Failed to fetch user record. Please try again later."});
+  }
 });
