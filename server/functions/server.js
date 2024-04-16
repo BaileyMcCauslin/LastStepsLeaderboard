@@ -14,9 +14,10 @@ const db = getFirestore();
 const UNSUCESSFUL_RES = 500;
 const SUCESSFUL_RES = 200;
 
-
-// Creates a new user
-// JSON body should send through email, password, and the display name
+/**
+ * Creates a new user
+ * JSON body should send through email, password, and the display name
+*/
 exports.RegisterUser = onRequest(async (req, res) => {
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Methods", "GET, POST");
@@ -36,7 +37,10 @@ exports.RegisterUser = onRequest(async (req, res) => {
   }
 });
 
-// Gets all records in the leaderboard collection
+
+/**
+ * Gets all records in the leaderboard collection
+*/
 exports.GetAllLeaderboardRecords = onRequest(async (req, res) => {
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Methods", "GET, POST");
@@ -51,8 +55,11 @@ exports.GetAllLeaderboardRecords = onRequest(async (req, res) => {
   }
 });
 
-// Gets a specific record based on the username
-// JSON body should send through the display name
+
+/**
+ * Gets a specific record based on the username
+ * JSON body should send through the display name
+*/
 exports.GetUserLeaderboardRecord = onRequest(async (req, res) => {
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Methods", "GET, POST");
@@ -72,5 +79,31 @@ exports.GetUserLeaderboardRecord = onRequest(async (req, res) => {
     console.error("Error fetching user record:", error);
     return res.status(UNSUCESSFUL_RES).send(
         {"Error": "Failed to fetch user record. Please try again later."});
+  }
+});
+
+/**
+ * Creates a new record for the user.
+*/
+exports.UploadRecord = onRequest(async (req, res) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "GET, POST");
+  res.set("Access-Control-Allow-Headers", "Content-Type");
+
+  const newRecord = {
+    "name": req.body.name,
+    "round": req.body.round,
+    "endless": req.body.endless,
+    "time": req.body.time,
+  };
+
+  try {
+    await db.collection("leaderboard").add(newRecord);
+    // Return success
+    return res.status(SUCESSFUL_RES).send({"Created new user record": "OK"});
+  } catch (error) {
+    // Return failure
+    return res.status(UNSUCESSFUL_RES).send(
+        {"Error creating record": error});
   }
 });
