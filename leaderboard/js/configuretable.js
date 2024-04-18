@@ -97,11 +97,10 @@ class Table {
     // Initalize the table
     constructor() {
         this.databaseConnector = new DatabaseConnector();
-        this.userRecords = this.databaseConnector.fetchUserRecords();
+        this.userRecords = null;
         this.sort = new SortInterface();
         this.UIHandler = new UIHandler();
     }
-
 
     // Change the sort strategy for the table
     changeSort(sortType) {
@@ -128,9 +127,9 @@ class Table {
     }
 
     // Creates a player row in the table
-    createTableRowElement(tableEntries,rowItems) {
+    createTableRowElement(rowItems) {
         let row = this.UIHandler.createElement("tr");
-        for(let entry in tableEntries) {
+        for(let entry in rowItems) {
             let tableEntry = this.UIHandler.createElement("td");
             this.UIHandler.setElementText(tableEntry,rowItems[entry]);
             this.UIHandler.appendElement(row,tableEntry);
@@ -139,17 +138,22 @@ class Table {
     }
 
     // Creates a row for each user in the leaderboard
-    createUserRows() {
+    async createUserRows() {
         const leaderboardRows = this.UIHandler.getElement("leaderboard-rows");
         const tableEntries = ["rank","name","endlessScore","roundScore","time"];
 
-        this.userRecords = this.sort.Sort(this.userRecords);
-        
-        for(const key in this.userRecords) {
-            const record = this.userRecords[key];
-            const rowItems = this.playerInfo(record,tableEntries,key);
-            let row = this.createTableRowElement(tableEntries,rowItems);
-            this.UIHandler.appendElement(leaderboardRows,row);
+        try {
+            await this.setUserRecords();
+            this.sort.Sort(this.userRecords);
+
+            for(const key in this.userRecords) {
+                const record = this.userRecords[key];
+                const rowItems = this.playerInfo(record,tableEntries,key);
+                let row = this.createTableRowElement(rowItems);
+                this.UIHandler.appendElement(leaderboardRows,row);
+            }
+        } catch(error) {
+            console.error(error);
         }
     }
 
@@ -167,6 +171,15 @@ class Table {
         return items;
     }
 
+    // Set the table user records
+    async setUserRecords() {
+        try {
+            this.userRecords = await this.databaseConnector.fetchUserRecords();
+        } catch(error) {
+            console.error(error);
+        }
+    }
+
     // Sort the table based on sort type
     sortTable(sortType) {
         this.clearTable();
@@ -175,17 +188,18 @@ class Table {
     }
 }
 
+// Connects database to table
 class DatabaseConnector {
     // Fetch all user records
-    fetchUserRecords() {
-        fetchEndpoint("",{})
-        .then(response => {
+    async fetchUserRecords() {
+        try {
+            const response = await fetchEndpoint("", {});
             return response.Records;
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-    }
+        } catch (error) {
+            alert("Could not fetch records");
+            throw error; // Re-throw the error to be caught by the caller
+        }
+    }    
 }
 
 // Populate the leaderboard on page load
