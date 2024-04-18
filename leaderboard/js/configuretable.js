@@ -1,140 +1,195 @@
 // Import the function to call DB actions
 import { fetchEndpoint } from "./servercalls.js";
 
-
-// Creates a player row
-export function createLeaderboardRowElement(items) {
-    // Create the row element
-    let row = document.createElement("tr");
-
-    // Loop through the table items
-    for(let item in items) {
-        // Create an entry for each item
-        let tableEntry = document.createElement("td");
-        // Give the element text
-        tableEntry.textContent = items[item];
-        // Append the new entry to the row
-        row.appendChild(tableEntry);
+/*
+ Define a sort interface for sort types to implement
+ no interfaces in JS: so we use a class
+*/
+class SortInterface {
+    // Initalize the class to use time as sort. Then change base on user inputs
+    // NOTE: Basically init a default sort method
+    constructor() {
+        this.SortStrategy = new TimeSort();
     }
-    // Return the new row element
-    return row;
-}
 
-// Sort the array of user records by time
-function sortByTime(array) {
-    // Return the array in sorted fashion
-    return array.sort((a, b) => {
-        // Split the time strings into hours, minutes, and seconds
-        const [hoursA, minutesA, secondsA] = a.time.split(':').map(Number);
-        const [hoursB, minutesB, secondsB] = b.time.split(':').map(Number);
-
-        // Compare hours
-        if (hoursA !== hoursB) {
-            return hoursB - hoursA;
-        }
-
-        // Compare minutes if hours are equal
-        if (minutesA !== minutesB) {
-            return minutesB - minutesA;
-        }
-
-        // Compare seconds if minutes are equal
-        return secondsB - secondsA;
-    });
-}
-
-
-// Sort the records using the user filter input
-function sortRecords(type,records) {
-    return type === "time" ? sortByTime(records) : sortByScore(type,records); 
-}
-
-// Sort by score metrics
-function sortByScore(scoreMetric,userRecords) {
-    switch(scoreMetric) {
-        case "round":
-            return userRecords.sort((a, b) => b.roundScore - a.roundScore);
-        case "endless":
-            return userRecords.sort((a, b) => b.endlessScore - a.endlessScore);
+    // Set the sorting strategy
+    setStrategy(strategy) {
+        this.SortStrategy = strategy;
     }
-    return userRecords;
+
+    // Get the sorting stategy were using
+    getStrategy() {
+        return this.SortStrategy;
+    }
+
+    // Sort the records based on the strategy
+    Sort(records) {
+        this.SortStrategy.Sort(records);
+    }
 }
 
-// Creates a row for each user in the leaderboard
-function createUserRows(scoreMetric,userRecords) {
-    // Get the leaderboard container to put rows in
-    const leaderboardRows = document.getElementById("leaderboard-rows");
+// Define a TimSort class that implements the SortInterface
+class TimeSort {
+    Sort(records) {
+        return records.sort((a, b) => {
+            const [hoursA, minutesA, secondsA] = a.time.split(':').map(Number);
+            const [hoursB, minutesB, secondsB] = b.time.split(':').map(Number);
 
-    // Get the player records
-    let records = userRecords.Records;
+            if (hoursA !== hoursB) {
+                return hoursB - hoursA;
+            }
 
-    // State the table headers
-    const tableEntries = ["rank","name","endlessScore","roundScore","time"];
+            if (minutesA !== minutesB) {
+                return minutesB - minutesA;
+            }
 
-    // Check if we want to sort by time or score
-    records = sortRecords(scoreMetric,records);
-    
-    // Loop through each of the items in the collected user records
-    for(const key in records) {
+            return secondsB - secondsA;
+        });
+    }
+}
 
-        // Get the current record from the array
-        const record = records[key];
+// Define an EndlessSort class that implements the SortInterface
+class EndlessSort {
+    Sort(records) {
+        records.sort((a, b) => b.endlessScore - a.endlessScore);
+    }
+}
 
-        // Create an object to store the key,pairs of entries
+// Define a RoundSort class that implements the SortInterface
+class RoundSort {
+    Sort(records) {
+        records.sort((a, b) => b.roundScore - a.roundScore);
+    }
+}
+
+// Handles UI operations
+class UIHandler {
+    // Create a new element
+    createElement(elementType) {
+        return document.createElement(elementType);
+    }
+
+    // Get an existing element
+    getElement(id) {
+        return document.getElementById(id);
+    }
+
+    // Set an elements text
+    setElementText(element,text) {
+        element.textContent = text;
+    }
+
+    // Append a child to parent node
+    appendElement(parent,child) {
+        parent.appendChild(child);
+    }
+
+    // Remove an elements children
+    removeElementsChildren(element) {
+        while(element.firstChild) {
+            element.removeChild(element.firstChild);
+        }
+    }
+}
+
+// The leaderboard table
+class Table {
+    // Initalize the table
+    constructor() {
+        this.databaseConnector = new DatabaseConnector();
+        this.userRecords = this.databaseConnector.fetchUserRecords();
+        this.sort = new SortInterface();
+        this.UIHandler = new UIHandler();
+    }
+
+
+    // Change the sort strategy for the table
+    changeSort(sortType) {
+        switch(sortType) {
+            case "time":
+                this.sort.setStrategy(new TimeSort());
+                break;
+            case "endless":
+                this.sort.setStrategy(new EndlessSort());
+                break;
+            case "round":
+                this.sort.setStrategy(new RoundSort());
+                break;
+            default:
+                this.sort.setStrategy(new TimeSort());
+                break;
+        }
+    }
+
+    // Clear the tables content
+    clearTable() {
+        const leaderboardTable = this.UIHandler.getElement("leaderboard-rows");
+        this.UIHandler.removeElementsChildren(leaderboardTable);
+    }
+
+    // Creates a player row in the table
+    createTableRowElement(tableEntries,rowItems) {
+        let row = this.UIHandler.createElement("tr");
+        for(let entry in tableEntries) {
+            let tableEntry = this.UIHandler.createElement("td");
+            this.UIHandler.setElementText(tableEntry,rowItems[entry]);
+            this.UIHandler.appendElement(row,tableEntry);
+        }
+        return row;
+    }
+
+    // Creates a row for each user in the leaderboard
+    createUserRows() {
+        const leaderboardRows = this.UIHandler.getElement("leaderboard-rows");
+        const tableEntries = ["rank","name","endlessScore","roundScore","time"];
+
+        this.userRecords = this.sort.Sort(this.userRecords);
+        
+        for(const key in this.userRecords) {
+            const record = this.userRecords[key];
+            const rowItems = this.playerInfo(record,tableEntries,key);
+            let row = this.createTableRowElement(tableEntries,rowItems);
+            this.UIHandler.appendElement(leaderboardRows,row);
+        }
+    }
+
+    // Return a player object that contains info for each row
+    playerInfo(record,tableEntries,key) {
         let items = {};
 
-        // Loop through the table headers
         for(let item in tableEntries) {
-
-            // Get the object key
             let itemKey = tableEntries[item];
-
-            // Check that we dont get rank(Not stored in DB
-            // instead computed on client side
-            if(item !== "0") {
-                items[itemKey] = record[itemKey];
-            }
-            else {
-                // Otherwise, we have to determine rank, need to convert key to
-                // int so we can add 1 to it's value
-                items[itemKey] = parseInt(key, 10)+1;
-            }
+            // If the key is not rank then set the value to the record value
+            // Otherwise, create the player rank
+            items[itemKey] = item !== "0" ? record[itemKey] : 
+                                                            parseInt(key, 10)+1;
         }
+        return items;
+    }
 
-        // Create a row for each player
-        let row = createLeaderboardRowElement(items);
-
-        // Append it to the leaderboard
-        leaderboardRows.appendChild(row);
+    // Sort the table based on sort type
+    sortTable(sortType) {
+        this.clearTable();
+        this.changeSort(sortType);
+        this.createUserRows();
     }
 }
 
-function clearTable() {
-    const element = document.getElementById("leaderboard-rows");
-    while (element.firstChild) {
-        element.removeChild(element.firstChild);
+class DatabaseConnector {
+    // Fetch all user records
+    fetchUserRecords() {
+        fetchEndpoint("",{})
+        .then(response => {
+            return response.Records;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
     }
-}
-
-// Calls the cloud function to return records to the DB
-export function fetchUserRecords(sortType) {
-    // Clear table after each reload
-    clearTable();
-
-    //Fetch the endpoint for all users
-    fetchEndpoint("",{})
-    .then(response => {
-        // When we get a response back, make the rows
-        createUserRows(sortType,response);
-        return response.Records;
-    })
-    .catch(error => {
-        // Handle error if fetching data fails
-        console.error('Error:', error);
-    });
 }
 
 // Populate the leaderboard on page load
 window.onload = function() {
-    fetchUserRecords("time");
+    const table = new Table();
+    table.createUserRows();
 }
