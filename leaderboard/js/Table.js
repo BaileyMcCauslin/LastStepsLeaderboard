@@ -1,4 +1,5 @@
 // Import the function to call DB actions
+import { EventHandler } from "./EventHandler.js";
 import { fetchEndpoint } from "./servercalls.js";
 
 /*
@@ -62,44 +63,14 @@ class RoundSort {
     }
 }
 
-// Handles UI operations
-class UIHandler {
-    // Create a new element
-    createElement(elementType) {
-        return document.createElement(elementType);
-    }
-
-    // Get an existing element
-    getElement(id) {
-        return document.getElementById(id);
-    }
-
-    // Set an elements text
-    setElementText(element,text) {
-        element.textContent = text;
-    }
-
-    // Append a child to parent node
-    appendElement(parent,child) {
-        parent.appendChild(child);
-    }
-
-    // Remove an elements children
-    removeElementsChildren(element) {
-        while(element.firstChild) {
-            element.removeChild(element.firstChild);
-        }
-    }
-}
-
 // The leaderboard table
-class Table {
+export class Table {
     // Initalize the table
-    constructor() {
-        this.databaseConnector = new DatabaseConnector();
+    constructor(databaseConnector,UIHandler) {
         this.userRecords = null;
+        this.databaseConnector = databaseConnector;
+        this.UIHandler = UIHandler;
         this.sort = new SortInterface();
-        this.UIHandler = new UIHandler();
     }
 
     // Change the sort strategy for the table
@@ -143,7 +114,9 @@ class Table {
         const tableEntries = ["rank","name","endlessScore","roundScore","time"];
 
         try {
-            await this.setUserRecords();
+            if(this.userRecords === null) {
+                await this.fetchUserRecords();
+            } 
             this.sort.Sort(this.userRecords);
 
             for(const key in this.userRecords) {
@@ -172,12 +145,26 @@ class Table {
     }
 
     // Set the table user records
-    async setUserRecords() {
+    async fetchUserRecords() {
         try {
             this.userRecords = await this.databaseConnector.fetchUserRecords();
         } catch(error) {
             console.error(error);
         }
+    }
+
+    // Reset the table
+    resetTable(userRecords) {
+        if(userRecords !== null) {
+            this.setUserRecords(userRecords);
+        }
+        this.clearTable();
+        this.createUserRows();
+    }
+
+    // Set the user records
+    setUserRecords(userRecords) {
+        this.userRecords = userRecords;
     }
 
     // Sort the table based on sort type
@@ -186,24 +173,4 @@ class Table {
         this.changeSort(sortType);
         this.createUserRows();
     }
-}
-
-// Connects database to table
-class DatabaseConnector {
-    // Fetch all user records
-    async fetchUserRecords() {
-        try {
-            const response = await fetchEndpoint("", {});
-            return response.Records;
-        } catch (error) {
-            alert("Could not fetch records");
-            throw error; // Re-throw the error to be caught by the caller
-        }
-    }    
-}
-
-// Populate the leaderboard on page load
-window.onload = function() {
-    const table = new Table();
-    table.createUserRows();
 }
