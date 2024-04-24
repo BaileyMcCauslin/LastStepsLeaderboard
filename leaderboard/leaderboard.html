@@ -3,10 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script type="module" src="js/servercalls.js"></script>
-    <script type="module" src="js/configuretable.js"></script>
-    <script type="module" src="js/handleforms.js"></script>
-    <script type="module" src="js/filterdropdown.js"></script>
+    <script type="module" src="js/Leaderboard.js"></script>
     <title>Last Steps Leaderboard</title>
     <link rel="stylesheet" href="./styles/leaderboard.css">
 </head>
@@ -27,8 +24,8 @@
                 <input id="player-name" type="text" placeholder="Enter a player name..." name="search">
                 <button type="submit">Find Player</button>
                 <div class="filter-dropdown">
-                    <button class="filter-btn">Filter</button>
-                    <div class="dropdown-content">
+                    <button id="filter-btn" class="filter-btn">Filter</button>
+                    <div id="dropdown-content" class="dropdown-content">
                       <a id="time" data-filter="category1">Time</a>
                       <a id="round" data-filter="category2">Round</a>
                       <a id="endless" data-filter="category3">Endless</a>

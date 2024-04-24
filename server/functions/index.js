@@ -1,7 +1,8 @@
 // Get functions from corisponding files
 // const gameHandler = require("./game-handler");
-const leaderboardHandler = require("./leaderboard-handler");
+const server = require("./server");
 
-exports.RegisterUser = leaderboardHandler.RegisterUser;
-exports.AllRecords = leaderboardHandler.GetAllLeaderboardRecords;
-exports.GetUserRecord = leaderboardHandler.GetUserLeaderboardRecord;
+exports.RegisterUser = server.RegisterUser;
+exports.AllRecords = server.GetAllLeaderboardRecords;
+exports.GetUserRecord = server.GetUserLeaderboardRecord;
+exports.CreateRecord = server.UploadRecord;
